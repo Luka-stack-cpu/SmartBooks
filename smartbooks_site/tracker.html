@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Трекер действий после книги — Smart Books</title>
+<meta name="description" content="Бесплатный трекер: добавьте купленную книгу и получите список конкретных шагов, как применить её на практике. Отмечайте выполненное и держите серию дней.">
+<meta name="keywords" content="трекер действий, как применять книги на практике, чек-лист после прочтения, трекер привычек, план действий по книге, Smart Books">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="theme-color" content="#0E0D0C">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="Smart Books">
+<meta property="og:title" content="Трекер действий после книги — Smart Books">
+<meta property="og:description" content="Бесплатный трекер: добавьте купленную книгу и получите список конкретных шагов, как применить её на практике. Отмечайте выполненное и держите серию дней.">
+<meta property="og:image" content="img/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="img/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="img/favicon.png"><link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Lora:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Главная", "item": "index.html"}, {"@type": "ListItem", "position": 2, "name": "Трекер действий", "item": "tracker.html"}]}</script>
+</head>
+<body>
+<header class="site-header"><div class="wrap"><a class="brand" href="index.html" aria-label="Smart Books — на главную"><img src="img/logo-dark.png" alt="Smart Books — книги в Бишкеке" width="130" height="44"></a><nav class="nav" id="nav" aria-label="Основное меню"><a href="index.html#catalog">Каталог</a><a href="index.html#levels">Уровни и скидки</a><a href="tracker.html" aria-current="page">Трекер действий</a><a href="index.html#faq">Вопросы</a><a data-ig href="https://www.instagram.com/smartbooks111" target="_blank" rel="noopener">Instagram</a></nav><button type="button" class="burger" id="burger" aria-label="Меню">☰</button><button type="button" class="cart-btn" id="cartBtn" aria-label="Открыть корзину">🛒 <span>Корзина</span> <span class="cart-count" id="cartCount" style="display:none">0</span></button></div></header>
+<main>
+<section aria-labelledby="h1" data-keywords="трекер действий, как применять книги на практике"><div class="wrap">
+ <div class="sec-head"><span class="eyebrow">Smart Books</span><h1 id="h1" style="font-size:clamp(30px,4.5vw,48px)">Трекер действий: от книги к результату</h1>
+ <p>Выберите книгу, которую вы купили, и отмечайте шаги, которые помогут применить прочитанное. Данные хранятся в вашем браузере.</p></div>
+ <div class="stats" aria-label="Ваша статистика"><div class="stat"><b id="stBooks">0</b><span>книг в трекере</span></div><div class="stat"><b id="stDone">0 / 0</b><span>шагов выполнено</span></div>
+ <div class="stat"><b id="stStreak">0 дней</b><span>серия дней подряд</span></div><div class="stat"><b id="stToday">ещё нет</b><span>сегодня выполнено</span></div></div>
+ <div class="panel" style="margin-bottom:22px"><h2 style="font-size:22px;margin-bottom:12px">Добавить купленную книгу</h2>
+ <div class="addrow"><label class="visually-hidden" for="tSelect">Книга</label><select id="tSelect"></select><button type="button" class="btn" id="tAdd">Добавить в трекер</button></div></div>
+ <div id="tList"></div>
+</div></section></main>
+<footer class="site-footer"><div class="wrap"><div><img src="img/logo-dark.png" alt="Smart Books" width="130" height="44"><div>Книги по психологии, саморазвитию, финансам и художественная литература.<br>Бишкек, Кыргызстан.</div></div><div class="foot-links"><b>Связаться</b><a data-wa href="#" target="_blank" rel="noopener">WhatsApp +996 775 197 277</a><a data-ig href="https://www.instagram.com/smartbooks111" target="_blank" rel="noopener">Instagram @smartbooks111</a></div><div class="foot-links"><b>Разделы</b><a href="index.html#catalog">Каталог книг</a><a href="tracker.html">Трекер действий</a><a href="index.html#faq">Вопросы и ответы</a><a href="admin.html" rel="nofollow" style="color:var(--muted)">Для владельца</a></div></div><div class="wrap" style="margin-top:18px">© <span id="y">2026</span> Smart Books. Цены указаны в сомах.</div></footer>
+<div class="overlay" id="overlay"></div><aside class="drawer" id="drawer" aria-label="Корзина"><header><h2>Корзина</h2><button type="button" class="x" id="cartClose" aria-label="Закрыть">×</button></header><div class="cart-items" id="cartItems"></div><div class="cart-foot" id="cartFoot"></div></aside><a class="wa-float" id="waFloat" href="#" target="_blank" rel="noopener" aria-label="Написать в WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#fff" opacity=".0"/><path fill="#fff" d="M16 3C8.8 3 3 8.8 3 16c0 2.3.6 4.5 1.7 6.4L3 29l6.8-1.8C11.6 28.3 13.8 29 16 29c7.2 0 13-5.8 13-13S23.2 3 16 3zm0 23.7c-2 0-3.900-.6-5.600-1.600l-.4-.2-4 1 1.100-3.900-.3-.4C5.700 19.800 5.100 17.900 5.100 16 5.100 9.900 10 5.100 16 5.100S26.900 9.900 26.900 16 22 26.700 16 26.700zm5.900-8c-.3-.2-1.900-.9-2.200-1-.3-.1-.5-.2-.7.200-.2.300-.8 1-1 1.200-.2.200-.4.200-.7.100-1.900-.9-3.100-1.700-4.400-3.800-.3-.6.300-.5.900-1.700.1-.2.100-.4 0-.5-.1-.2-.7-1.700-1-2.300-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.400-.3.300-1.100 1.100-1.100 2.600s1.100 3 1.300 3.200c.2.200 2.200 3.400 5.300 4.700 2 .8 2.700.9 3.700.7.600-.1 1.900-.8 2.200-1.500.3-.7.300-1.400.2-1.500-.1-.2-.3-.3-.6-.4z"/></svg><span>Написать в WhatsApp</span></a><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="js/data.js"></script><script src="js/core.js"></script><script src="js/tracker.js"></script>
+</body>
+</html>

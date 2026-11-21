@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Админ-панель — Smart Books</title>
+<meta name="description" content="Управление каталогом Smart Books">
+<meta name="keywords" content="админ">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0E0D0C">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="Smart Books">
+<meta property="og:title" content="Админ-панель — Smart Books">
+<meta property="og:description" content="Управление каталогом Smart Books">
+<meta property="og:image" content="img/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="img/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="img/favicon.png"><link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Lora:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="site-header"><div class="wrap"><a class="brand" href="index.html" aria-label="Smart Books — на главную"><img src="img/logo-dark.png" alt="Smart Books — книги в Бишкеке" width="130" height="44"></a><nav class="nav" id="nav" aria-label="Основное меню"><a href="index.html#catalog">Каталог</a><a href="index.html#levels">Уровни и скидки</a><a href="tracker.html">Трекер действий</a><a href="index.html#faq">Вопросы</a><a data-ig href="https://www.instagram.com/smartbooks111" target="_blank" rel="noopener">Instagram</a></nav><button type="button" class="burger" id="burger" aria-label="Меню">☰</button><button type="button" class="cart-btn" id="cartBtn" aria-label="Открыть корзину">🛒 <span>Корзина</span> <span class="cart-count" id="cartCount" style="display:none">0</span></button></div></header>
+<main>
+<div class="gate panel" id="gate"><h1 id="gateTitle" style="font-size:28px">Вход</h1><p id="gateText" style="color:var(--muted)"></p>
+ <input type="password" id="gatePin" aria-label="PIN-код" autocomplete="off"><div id="gateErr" style="color:var(--danger);min-height:22px"></div><button type="button" class="btn" id="gateGo">Войти</button></div>
+<div id="app" style="display:none"><div class="wrap" style="padding-top:28px;padding-bottom:60px">
+ <h1 style="font-size:32px">Админ-панель Smart Books</h1>
+ <div class="note"><b>Как это работает.</b> Правки сохраняются в этом браузере и сразу видны вам на сайте. Чтобы их увидели покупатели, нажмите «Опубликовать» — скачается файл <code>data.js</code>; загрузите его в папку <code>js/</code> на хостинге вместо старого.</div>
+ <div class="toolbar"><button type="button" class="btn" id="save">Сохранить</button><button type="button" class="btn" id="publish">Опубликовать (скачать data.js)</button>
+  <button type="button" class="btn ghost" id="exportBtn">Экспорт JSON</button><label class="btn ghost" style="cursor:pointer">Импорт JSON<input type="file" id="importFile" accept="application/json" hidden></label>
+  <button type="button" class="btn ghost" id="resetBtn">Сбросить правки</button><button type="button" class="btn ghost" id="pinBtn">Сменить PIN</button><button type="button" class="btn ghost" id="logout">Выйти</button></div>
+ <p id="dirty" style="color:var(--accent);font-weight:700"></p><p id="summary" style="color:var(--muted)"></p>
+ <div class="panel" style="margin-bottom:22px"><h2 style="font-size:22px;margin-bottom:12px">Добавить новую книгу</h2>
+  <div class="form-grid"><label>Название<input type="text" id="nTitle"></label><label>Автор<input type="text" id="nAuthor"></label><label>Цена, сом<input type="number" id="nPrice" min="0" step="10"></label>
+  <label>Остаток (пусто = без ограничения)<input type="number" id="nStock" min="0"></label><label>Категория<select id="nCat"></select></label><label>Фото обложки<input type="file" id="nImg" accept="image/*"></label>
+  <label style="grid-column:1/-1">Описание<textarea id="nDesc" rows="2"></textarea></label><label><span><input type="checkbox" id="nAdult"> 18+</span></label></div>
+  <button type="button" class="btn" id="addBtn" style="margin-top:12px">Добавить книгу</button></div>
+ <div class="toolbar" style="align-items:center"><input type="text" id="filter" placeholder="Поиск по названию" style="min-width:240px"><label><input type="checkbox" id="onlyLow"> только где мало (≤5)</label></div>
+ <div class="table-wrap"><table class="table-admin"><thead><tr><th></th><th>Название / автор</th><th>Цена</th><th>Остаток</th><th>Категория</th><th>Флаги</th><th>Описание</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+</div></div></main>
+<div class="overlay" id="overlay"></div><aside class="drawer" id="drawer" aria-label="Корзина"><header><h2>Корзина</h2><button type="button" class="x" id="cartClose" aria-label="Закрыть">×</button></header><div class="cart-items" id="cartItems"></div><div class="cart-foot" id="cartFoot"></div></aside><a class="wa-float" id="waFloat" href="#" target="_blank" rel="noopener" aria-label="Написать в WhatsApp"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#fff" opacity=".0"/><path fill="#fff" d="M16 3C8.8 3 3 8.8 3 16c0 2.3.6 4.5 1.7 6.4L3 29l6.8-1.8C11.6 28.3 13.8 29 16 29c7.2 0 13-5.8 13-13S23.2 3 16 3zm0 23.7c-2 0-3.900-.6-5.600-1.600l-.4-.2-4 1 1.100-3.900-.3-.4C5.700 19.800 5.100 17.900 5.100 16 5.100 9.900 10 5.100 16 5.100S26.900 9.900 26.900 16 22 26.700 16 26.700zm5.900-8c-.3-.2-1.900-.9-2.200-1-.3-.1-.5-.2-.7.200-.2.300-.8 1-1 1.200-.2.200-.4.200-.7.100-1.900-.9-3.100-1.700-4.400-3.800-.3-.6.300-.5.900-1.700.1-.2.100-.4 0-.5-.1-.2-.7-1.700-1-2.300-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.400-.3.300-1.100 1.100-1.100 2.600s1.100 3 1.300 3.200c.2.200 2.200 3.400 5.300 4.700 2 .8 2.700.9 3.700.7.600-.1 1.900-.8 2.200-1.500.3-.7.300-1.400.2-1.500-.1-.2-.3-.3-.6-.4z"/></svg><span>Написать в WhatsApp</span></a><div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="js/data.js"></script><script src="js/core.js"></script><script src="js/admin.js"></script>
+</body>
+</html>
