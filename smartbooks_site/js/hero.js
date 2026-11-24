@@ -1,152 +1,548 @@
-/* Smart Books — герой. Рисуется слоями: база -> наряд (по категории) -> предметы уровня */
+/* Smart Books — пиксельный герой (RPG-спрайт слоями: аура -> плащ -> тело -> наряд -> голова -> аксессуары/уровень) */
 (function (root) {
-  var SKIN = '#F0C4A0', SKIN2 = '#E2AE88', HAIR = '#3A2A22';
-  var AMBER = '#F5A50A', CREAM = '#F4ECE0';
+  'use strict';
+
+  var P = 8; // размер 1 пикселя в SVG (сетка 40x48 -> 320x384)
 
   var OUTFITS = {
-    base:         { name: 'Новичок',        torso: '#8E949F', pants: '#3C4B66', shoes: '#E8E8E8' },
-    thinker:      { name: 'Мыслитель',      torso: '#7B6350', pants: '#4B4B52', shoes: '#2B2623' },
-    entrepreneur: { name: 'Предприниматель',torso: '#1F2F4A', pants: '#1F2F4A', shoes: '#15110F' },
-    warrior:      { name: 'Воин',           torso: '#2B2623', pants: '#1E1E22', shoes: '#15110F' },
-    mystic:       { name: 'Мистик',         torso: '#3B2F6B', pants: '#3B2F6B', shoes: '#2B2250' },
-    dreamer:      { name: 'Мечтатель',      torso: '#E9A4B6', pants: '#6F6A8F', shoes: '#F4ECE0' }
+    base:         { name: 'Новичок' },
+    thinker:      { name: 'Мыслитель' },
+    entrepreneur: { name: 'Предприниматель' },
+    warrior:      { name: 'Воин' },
+    mystic:       { name: 'Мистик' },
+    dreamer:      { name: 'Мечтатель' }
   };
 
-  function star(cx, cy, r, fill) {
-    var pts = [];
-    for (var i = 0; i < 10; i++) {
-      var ang = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r * 0.45 : r;
-      pts.push((cx + Math.cos(ang) * rad).toFixed(1) + ',' + (cy + Math.sin(ang) * rad).toFixed(1));
+  /* Палитры цветов по классам */
+  var PAL = {
+    outline: '#1B1411',
+    skin1: '#FAD5B5', skin2: '#EDC098', skin3: '#D1976C',
+    blush: '#EE9389', eye: '#241914', white: '#FFFFFF',
+    gold1: '#FFE082', gold2: '#F5A50A', gold3: '#B86E08',
+    cream: '#F4ECE0', cream2: '#D8CCBA',
+    ruby: '#E94B6A', sapphire: '#6FB1FF',
+    cape: {
+      base:         ['#DEA062', '#B87228', '#7D4714'],
+      thinker:      ['#D6944E', '#A86724', '#6E3E12'],
+      entrepreneur: ['#D99B38', '#A66C18', '#6B420A'],
+      warrior:      ['#D95545', '#A83226', '#6E1D15'],
+      mystic:       ['#6F5AC2', '#4D3B96', '#312366'],
+      dreamer:      ['#E68AA8', '#BC5E7D', '#803751']
+    },
+    outfit: {
+      base:         { t1: '#959CA8', t2: '#787F8C', t3: '#555B66', p1: '#495A7A', p2: '#374561', s1: '#EFECE6', s2: '#B8B4AC', h1: '#543D32', h2: '#3B2A22', h3: '#261A14' },
+      thinker:      { t1: '#997C64', t2: '#7B604B', t3: '#594232', p1: '#575761', p2: '#3F3F47', s1: '#3D3530', s2: '#241F1C', h1: '#543D32', h2: '#3B2A22', h3: '#261A14' },
+      entrepreneur: { t1: '#2A4066', t2: '#1D2E4D', t3: '#121E33', p1: '#1D2E4D', p2: '#121E33', s1: '#2B2420', s2: '#14100E', h1: '#362A25', h2: '#211815', h3: '#140E0C' },
+      warrior:      { t1: '#3D3632', t2: '#2B2522', t3: '#1C1816', p1: '#2E2E35', p2: '#1D1D22', s1: '#26201D', s2: '#14110F', h1: '#453229', h2: '#2E201A', h3: '#1C130F' },
+      mystic:       { t1: '#534394', t2: '#3B2E6E', t3: '#261C4D', p1: '#3B2E6E', p2: '#261C4D', s1: '#2E2359', s2: '#1C143B', h1: '#3A3142', h2: '#261F2E', h3: '#16111C' },
+      dreamer:      { t1: '#F2ABC0', t2: '#DE85A0', t3: '#B35D78', p1: '#7B759E', p2: '#5B557A', s1: '#F4ECE0', s2: '#CFC4B4', h1: '#8C523D', h2: '#6B3B2A', h3: '#4A261A' }
     }
-    return '<polygon points="' + pts.join(' ') + '" fill="' + fill + '"/>';
+  };
+
+  /* Конструктор пиксельной сетки 40x48 с RLE-оптимизацией по строкам */
+  function Grid(w, h) {
+    this.w = w;
+    this.h = h;
+    this.cells = new Array(w * h);
   }
-  function spark(x, y, s, d) {
-    return '<g class="tw" style="animation-delay:' + d + 's"><path d="M' + x + ' ' + (y - s) + ' L' + (x + s * 0.3) + ' ' + (y - s * 0.3) + ' L' + (x + s) + ' ' + y + ' L' + (x + s * 0.3) + ' ' + (y + s * 0.3) + ' L' + x + ' ' + (y + s) + ' L' + (x - s * 0.3) + ' ' + (y + s * 0.3) + ' L' + (x - s) + ' ' + y + ' L' + (x - s * 0.3) + ' ' + (y - s * 0.3) + 'Z" fill="' + AMBER + '"/></g>';
-  }
-  function miniBook(x, y, rot, c) {
-    return '<g transform="translate(' + x + ' ' + y + ') rotate(' + rot + ')"><rect x="-13" y="-17" width="26" height="34" rx="3" fill="' + c + '"/><rect x="-13" y="-17" width="5" height="34" rx="2" fill="rgba(0,0,0,.25)"/><rect x="-4" y="-9" width="14" height="3" rx="1.5" fill="rgba(255,255,255,.6)"/><rect x="-4" y="-2" width="10" height="3" rx="1.5" fill="rgba(255,255,255,.4)"/></g>';
+  Grid.prototype.px = function (x, y, c) {
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h || !c) return;
+    this.cells[y * this.w + x] = c;
+  };
+  Grid.prototype.rect = function (x, y, w, h, c) {
+    for (var dy = 0; dy < h; dy++) {
+      for (var dx = 0; dx < w; dx++) this.px(x + dx, y + dy, c);
+    }
+  };
+  Grid.prototype.rows = function (ox, oy, lines, map) {
+    for (var y = 0; y < lines.length; y++) {
+      var row = lines[y];
+      for (var x = 0; x < row.length; x++) {
+        var ch = row.charAt(x);
+        if (ch !== '.' && map[ch]) this.px(ox + x, oy + y, map[ch]);
+      }
+    }
+  };
+  Grid.prototype.toSVG = function () {
+    var out = '';
+    for (var y = 0; y < this.h; y++) {
+      var x = 0;
+      while (x < this.w) {
+        var c = this.cells[y * this.w + x];
+        if (!c) { x++; continue; }
+        var len = 1;
+        while (x + len < this.w && this.cells[y * this.w + x + len] === c) len++;
+        out += '<rect x="' + (x * P) + '" y="' + (y * P) + '" width="' + (len * P) + '" height="' + P + '" fill="' + c + '"/>';
+        x += len;
+      }
+    }
+    return out;
+  };
+
+  /* ---------- слои спрайта (сетка 40x48, центр x = 19.5) ---------- */
+  function drawCape(g, level, type) {
+    if (level < 3) return;
+    var cc = PAL.cape[type] || PAL.cape.base;
+    var O = PAL.outline;
+    // Пиксельный развевающийся плащ за спиной
+    g.rows(9, 23, [
+      '....OOOOOOOOOOOOOO....',
+      '...O12222222222221O...',
+      '..O1223222222223221O..',
+      '..O1232222222222321O..',
+      '.O123222222222222321O.',
+      '.O123222222222222321O.',
+      '.O122322222222223221O.',
+      'O12223222222222232221O',
+      'O12223222222222232221O',
+      'O12222322222222322221O',
+      'O12222322222222322221O',
+      'O12222322222222322221O',
+      'O13222322222222322231O',
+      'O33322322222222322333O',
+      '.OO3333333333333333OO.',
+      '...OO33OO....OO33OO...'
+    ], { O: O, '1': cc[0], '2': cc[1], '3': cc[2] });
   }
 
-  /* ---------- слои ---------- */
-  function aura(level) {
+  function drawMysticHoodBack(g, type, p) {
+    if (type !== 'mystic') return;
+    var O = PAL.outline;
+    // Заострённый капюшон мага, обрамляющий голову
+    g.rows(10, 5, [
+      '.......OOOOOO.......',
+      '.....OO111111OO.....',
+      '....O1122222211O....',
+      '...O122222222221O...',
+      '..O12333333333321O..',
+      '.O1233333333333321O.',
+      '.O1233333333333321O.',
+      '.O1233333333333321O.',
+      '.O1233333333333321O.',
+      '.O1233333333333321O.',
+      '.O1233333333333321O.',
+      '..O23333333333332O..',
+      '..O23333333333332O..',
+      '...O223333333322O...',
+      '....OO22222222OO....'
+    ], { O: O, '1': p.t1, '2': p.t2, '3': p.t3 });
+  }
+
+  function drawLegsAndTorso(g, type, p) {
+    var O = PAL.outline;
+    if (type === 'mystic') {
+      // Длинная мантия звездочёта
+      g.rows(11, 22, [
+        '....OOOOOOOOOO....',
+        '...O1111221111O...',
+        '..O11222G222211O..',
+        '..O1222G2G22221O..',
+        '..O12222G222222O..',
+        '..O122222222222O..',
+        '.O1222G222222223O.',
+        '.O12222222222G23O.',
+        '.O1222222C222223O.',
+        '.O12222222222223O.',
+        'O122C222222222233O',
+        'O1222222222G22233O',
+        'O1222222222222233O',
+        'O12222G222222C233O',
+        'O1222222222222233O',
+        'O2222222222222233O',
+        'O3333333333333333O',
+        '.OOOOOOOOOOOOOOOO.',
+        '..OSSSSO..OSSSSO..',
+        '..OssssO..OssssO..',
+        '..OOOOOO..OOOOOO..'
+      ], { O: O, '1': p.t1, '2': p.t2, '3': p.t3, G: PAL.gold2, C: PAL.cream, S: p.s1, s: p.s2 });
+      return;
+    }
+
+    // Ноги и ботинки (обычные классы)
+    g.rows(14, 34, [
+      '.OOOOOOOOOO.',
+      '.O111OO111O.',
+      '.O112OO112O.',
+      '.O112OO112O.',
+      '.O112OO112O.',
+      '.O112OO112O.',
+      '.O222OO222O.',
+      'OSSSSOOSSSSO',
+      'OssssOOssssO',
+      'OOOOOOOOOOOO'
+    ], { O: O, '1': p.p1, '2': p.p2, S: p.s1, s: p.s2 });
+
+    // Торс
+    g.rows(13, 22, [
+      '...OOOOOOOO...',
+      '..O11111111O..',
+      '.O1111111122O.',
+      '.O1111111122O.',
+      '.O1111111122O.',
+      '.O1122222222O.',
+      '.O1122222222O.',
+      '.O1122222222O.',
+      '.O2222222222O.',
+      '.O2222222233O.',
+      '.O2222222233O.',
+      '.O3333333333O.',
+      '..OOOOOOOOOO..'
+    ], { O: O, '1': p.t1, '2': p.t2, '3': p.t3 });
+
+    // Детали наряда на торсе
+    if (type === 'base') {
+      // Шнурки худи и карман-кенгуру
+      g.px(18, 24, PAL.cream); g.px(21, 24, PAL.cream);
+      g.px(18, 25, PAL.cream); g.px(21, 25, PAL.cream);
+      g.rect(17, 23, 6, 1, p.t3);
+      g.rect(16, 29, 8, 3, p.t3);
+      g.rect(17, 29, 6, 1, p.t2);
+    } else if (type === 'thinker') {
+      // Кардиган на пуговицах с кремовой рубашкой
+      g.rows(17, 23, [
+        'CCCCCC',
+        '.CCCC.',
+        '..CC..',
+        '..3G..',
+        '..33..',
+        '..3G..',
+        '..33..',
+        '..3G..'
+      ], { C: PAL.cream, '3': p.t3, G: PAL.gold2 });
+    } else if (type === 'entrepreneur') {
+      // Пиджак, белая рубашка и золотой галстук
+      g.rows(17, 23, [
+        'WWWWWW',
+        'W1GG1W',
+        '.WGGW.',
+        '.WggW.',
+        '..GG..',
+        '..GG..',
+        '..gg..',
+        '..gg..'
+      ], { W: PAL.white, '1': p.t1, G: PAL.gold2, g: PAL.gold3 });
+      g.px(16, 25, p.t1); g.px(23, 25, p.t1);
+      g.px(16, 26, p.t1); g.px(23, 26, p.t1);
+    } else if (type === 'warrior') {
+      // Диагональная перевязь и пояс с золотой пряжкой
+      for (var i = 0; i < 8; i++) {
+        g.px(15 + i, 24 + i, PAL.gold2);
+        g.px(16 + i, 24 + i, PAL.gold1);
+      }
+      g.rect(14, 32, 12, 2, PAL.gold3);
+      g.rect(18, 32, 4, 2, PAL.gold1);
+    } else if (type === 'dreamer') {
+      // Пиксельное сердечко и белый воротничок
+      g.px(17, 23, PAL.cream); g.px(18, 23, PAL.cream);
+      g.px(21, 23, PAL.cream); g.px(22, 23, PAL.cream);
+      g.rows(17, 25, [
+        '.RR.RR.',
+        'RRRRRRR',
+        'RRRRRRR',
+        '.RRRRR.',
+        '..RRR..',
+        '...R...'
+      ], { R: PAL.ruby });
+    }
+  }
+
+  function drawArms(g, type, level, p) {
+    var O = PAL.outline;
+    // Левая рука (плотно прилегает к плечу)
+    g.rows(10, 23, [
+      '..OOO',
+      '.O111',
+      '.O122',
+      '.O122',
+      '.O222',
+      '.O223',
+      '.OSSS',
+      '.OssO',
+      '..OO.'
+    ], { O: O, '1': p.t1, '2': p.t2, '3': p.t3, S: PAL.skin2, s: PAL.skin3 });
+    g.px(14, 24, p.t1); g.px(14, 25, p.t2);
+
+    // Правая рука — чуть приподнята, если держит книгу (level >= 1)
+    if (level >= 1) {
+      g.rows(25, 23, [
+        'OOO..',
+        '111O.',
+        '122O.',
+        '222O.',
+        '223O.',
+        'OSSO.',
+        'OssO.',
+        '.OO..'
+      ], { O: O, '1': p.t1, '2': p.t2, '3': p.t3, S: PAL.skin1, s: PAL.skin2 });
+    } else {
+      g.rows(25, 23, [
+        'OOO..',
+        '111O.',
+        '122O.',
+        '122O.',
+        '222O.',
+        '223O.',
+        'SSSO.',
+        'OssO.',
+        '.OO..'
+      ], { O: O, '1': p.t1, '2': p.t2, '3': p.t3, S: PAL.skin2, s: PAL.skin3 });
+    }
+    g.px(25, 24, p.t1); g.px(25, 25, p.t2);
+
+    // Наручи воина
+    if (type === 'warrior') {
+      g.rect(11, 27, 3, 2, PAL.gold2);
+      g.rect(26, level >= 1 ? 26 : 27, 3, 2, PAL.gold2);
+    }
+
+    // Дипломат предпринимателя в левой руке
+    if (type === 'entrepreneur') {
+      g.rows(6, 29, [
+        '..OOOO..',
+        '.O....O.',
+        'OOOOOOOO',
+        'OBBBBBBO',
+        'OBBGGGBO',
+        'OBbbbbBO',
+        'OBBBBBBO',
+        'OOOOOOOO'
+      ], { O: O, B: '#8A522D', b: '#5E351A', G: PAL.gold1 });
+    }
+
+    // Книга в правой руке начиная с уровня 1
+    if (level >= 1) {
+      g.rows(28, 22, [
+        '.OOOOOO.',
+        'OAAAAAAO',
+        'OAaCCaAO',
+        'OAaCCaAO',
+        'OAaCCaAO',
+        'OAaaaaAO',
+        'OCCCCCBO',
+        '.OOOOOO.'
+      ], { O: O, A: '#E8A864', a: '#C47E38', C: PAL.cream, B: PAL.ruby });
+    }
+  }
+
+  function drawHead(g, type, p) {
+    var O = PAL.outline;
+    // Шея
+    g.rect(18, 20, 4, 3, PAL.skin3);
+    g.px(17, 21, O); g.px(22, 21, O);
+    g.px(17, 22, O); g.px(22, 22, O);
+
+    // Длинные волосы сзади для Мечтателя
+    if (type === 'dreamer') {
+      g.rows(11, 13, [
+        'OO..............OO',
+        'O2O............O2O',
+        'O23O..........O32O',
+        'O23O..........O32O',
+        'O23O..........O32O',
+        '.O33O........O33O.',
+        '.O33O........O33O.',
+        '..OO..........OO..'
+      ], { O: O, '2': p.h2, '3': p.h3 });
+    }
+
+    // База головы и уши
+    g.rows(12, 9, [
+      '....OOOOOOOO....',
+      '..OOSSSSSSSSOO..',
+      '.OSSSSSSSSSSSSO.',
+      '.OSSSSSSSSSSSSO.',
+      'OOSSSSSSSSSSSSOO',
+      'O2SSSSSSSSSSSS2O',
+      'O2SSSSSSSSSSSS2O',
+      'OOSSSSSSSSSSSSOO',
+      '.OSSSSSSSSSSSSO.',
+      '.OSSSSSSSSSSSSO.',
+      '..OO22222222OO..',
+      '....OOOOOOOO....'
+    ], { O: O, S: PAL.skin2, '2': PAL.skin3 });
+    // Блики на лбу и лице
+    g.rect(15, 11, 10, 2, PAL.skin1);
+    g.rect(14, 13, 12, 5, PAL.skin1);
+
+    // Волосы (шапка/чёлка)
+    g.rows(12, 7, [
+      '....OOOOOOOO....',
+      '...O11111111O...',
+      '..O1111111122O..',
+      '.O111111112222O.',
+      '.O112222222233O.',
+      '.O222..2222..3O.'
+    ], { O: O, '1': p.h1, '2': p.h2, '3': p.h3 });
+
+    if (type === 'entrepreneur') {
+      // Аккуратный боковой пробор
+      g.rect(14, 10, 5, 2, p.h1);
+      g.rect(20, 11, 6, 1, p.h2);
+    } else if (type === 'warrior') {
+      // Боевая повязка с лентами справа
+      g.rect(13, 11, 14, 2, PAL.gold2);
+      g.rect(14, 11, 12, 1, PAL.gold1);
+      g.px(12, 11, O); g.px(27, 11, O);
+      g.rows(27, 10, [
+        'OOO..',
+        '11OO.',
+        '2211O',
+        '.OO22'
+      ], { O: O, '1': PAL.gold1, '2': PAL.gold2 });
+    } else if (type === 'dreamer') {
+      // Цветочек-ромашка в волосах
+      g.rows(25, 10, [
+        '.WW.',
+        'WYYW',
+        '.WW.'
+      ], { W: PAL.white, Y: PAL.gold1 });
+    }
+
+    // Глаза, блики, румянец, аккуратная улыбка
+    g.rect(15, 13, 2, 3, PAL.eye);
+    g.px(15, 13, PAL.white);
+    g.rect(23, 13, 2, 3, PAL.eye);
+    g.px(23, 13, PAL.white);
+    g.rect(14, 16, 2, 1, PAL.blush);
+    g.rect(24, 16, 2, 1, PAL.blush);
+    g.rect(19, 17, 2, 1, '#9A5440');
+
+    // Аксессуары головы по типу
+    if (type === 'thinker') {
+      // Пиксельные очки с золотой оправой
+      g.rect(14, 12, 4, 1, PAL.gold2); g.rect(14, 16, 4, 1, PAL.gold2);
+      g.rect(13, 13, 1, 3, PAL.gold2); g.rect(18, 13, 1, 3, PAL.gold2);
+      g.rect(22, 12, 4, 1, PAL.gold2); g.rect(22, 16, 4, 1, PAL.gold2);
+      g.rect(21, 13, 1, 3, PAL.gold2); g.rect(26, 13, 1, 3, PAL.gold2);
+      g.rect(19, 14, 2, 1, PAL.gold2);
+      // Блик на стекле
+      g.px(17, 13, '#A8D8FF'); g.px(25, 13, '#A8D8FF');
+    }
+  }
+
+  function drawBadge(g, level, type) {
+    if (level < 2 || type === 'mystic') return;
+    // Небольшой золотой значок уровня на груди
+    if (type === 'dreamer') {
+      g.px(20, 23, PAL.gold1);
+      return;
+    }
+    g.px(23, 24, PAL.gold1);
+    g.px(22, 25, PAL.gold1); g.px(23, 25, PAL.gold2); g.px(24, 25, PAL.gold1);
+    g.px(23, 26, PAL.gold2);
+  }
+
+  function drawCrown(g, level) {
+    if (level < 5) return;
+    var O = PAL.outline;
+    g.rows(13, 2, [
+      '..O...OO...O..',
+      '.O1O.O11O.O1O.',
+      '.O11OO11OO11O.',
+      '.O1211R11211O.',
+      '.O1B122221B1O.',
+      '.O2222222222O.',
+      '..OOOOOOOOOO..'
+    ], { O: O, '1': PAL.gold1, '2': PAL.gold2, R: PAL.ruby, B: PAL.sapphire });
+  }
+
+  /* Отдельные анимированные SVG-слои (пиксельная лампочка, луна, искры, летающие книги) */
+  function pxRect(x, y, w, h, c) {
+    return '<rect x="' + (x * P) + '" y="' + (y * P) + '" width="' + (w * P) + '" height="' + (h * P) + '" fill="' + c + '"/>';
+  }
+  function pxSpark(gx, gy, c, delay) {
+    return '<g class="tw" style="animation-delay:' + delay + 's">' +
+      pxRect(gx, gy - 1, 1, 3, c) +
+      pxRect(gx - 1, gy, 3, 1, c) +
+      pxRect(gx, gy, 1, 1, '#FFFFFF') +
+      '</g>';
+  }
+  function pxMiniBook(gx, gy, cover, spine) {
+    return '<g>' +
+      pxRect(gx - 1, gy - 2, 4, 5, PAL.outline) +
+      pxRect(gx - 1, gy - 1, 1, 3, spine) +
+      pxRect(gx, gy - 1, 2, 3, cover) +
+      pxRect(gx + 1, gy, 1, 1, PAL.cream) +
+      '</g>';
+  }
+
+  function extraEffects(level, type) {
+    var s = '';
+    // Класс-эффекты
+    if (type === 'thinker') {
+      // Пиксельная лампочка идеи над головой
+      s += '<g class="tw">' +
+        pxRect(19, 0, 2, 1, '#FFD27A') +
+        pxRect(18, 1, 4, 2, '#FFE8A3') +
+        pxRect(19, 2, 2, 1, '#FFFFFF') +
+        pxRect(19, 3, 2, 1, '#B0A69A') +
+        pxRect(16, 1, 1, 1, '#FFD27A') +
+        pxRect(23, 1, 1, 1, '#FFD27A') +
+        '</g>';
+    } else if (type === 'mystic') {
+      // Пиксельный полумесяц рядом с капюшоном
+      s += '<g class="tw" style="animation-delay:.3s">' +
+        pxRect(31, 7, 2, 1, PAL.gold1) +
+        pxRect(30, 8, 2, 1, PAL.gold1) +
+        pxRect(30, 9, 1, 2, PAL.gold2) +
+        pxRect(30, 11, 2, 1, PAL.gold2) +
+        pxRect(31, 12, 2, 1, PAL.gold1) +
+        '</g>';
+    }
+
+    // Искры по уровням
+    if (level >= 2) {
+      s += pxSpark(6, 13, PAL.gold2, 0) + pxSpark(34, 18, PAL.gold1, 0.5);
+    }
+    if (level >= 4) {
+      s += pxSpark(4, 26, PAL.gold1, 0.3) + pxSpark(35, 29, PAL.gold2, 0.8) + pxSpark(10, 6, PAL.gold1, 1.1);
+    }
+    if (level >= 5) {
+      s += pxSpark(29, 5, PAL.gold1, 0.2) + pxSpark(3, 38, PAL.gold2, 0.7) + pxSpark(36, 39, PAL.gold1, 1.0);
+    }
+    return s;
+  }
+
+  function auraLayer(level) {
     if (level < 4) return '';
     var op = level >= 5 ? 0.55 : 0.38;
-    return '<circle cx="160" cy="215" r="165" fill="url(#sbAura)" opacity="' + op + '"/>' +
-      '<g class="orbit">' + miniBook(52, 140, -18, '#DEA062') + miniBook(270, 120, 16, '#7B6350') + miniBook(262, 300, -10, '#F4ECE0') + (level >= 5 ? miniBook(58, 290, 12, '#3B2F6B') : '') + '</g>';
-  }
-  function cape(level, type) {
-    if (level < 3) return '';
-    var c = type === 'mystic' ? '#5B4A9B' : (type === 'dreamer' ? '#C97A94' : '#C9822F');
-    return '<path d="M104 182 C70 230 56 300 52 352 L268 352 C264 300 250 230 216 182 Z" fill="' + c + '"/>' +
-           '<path d="M104 182 C80 230 70 300 70 352 L110 352 C110 290 112 230 124 190Z" fill="rgba(0,0,0,.18)"/>';
-  }
-  function legs(o, type) {
-    if (type === 'mystic') return '';
-    return '<rect x="125" y="282" width="32" height="74" rx="10" fill="' + o.pants + '"/><rect x="163" y="282" width="32" height="74" rx="10" fill="' + o.pants + '"/>' +
-      '<ellipse cx="139" cy="362" rx="22" ry="9" fill="' + o.shoes + '"/><ellipse cx="181" cy="362" rx="22" ry="9" fill="' + o.shoes + '"/>' +
-      (type === 'base' ? '<rect x="118" y="360" width="42" height="4" rx="2" fill="#C9CCD2"/><rect x="160" y="360" width="42" height="4" rx="2" fill="#C9CCD2"/>' : '');
-  }
-  function torso(o, type) {
-    var t = '<rect x="104" y="174" width="112" height="116" rx="26" fill="' + o.torso + '"/>';
-    if (type === 'mystic') {
-      t = '<path d="M104 190 C104 176 216 176 216 190 L238 364 L82 364 Z" fill="' + o.torso + '"/>' +
-          '<path d="M160 176 L160 364" stroke="rgba(255,255,255,.12)" stroke-width="3"/>' +
-          star(124, 250, 6, CREAM) + star(198, 300, 5, AMBER) + star(142, 330, 4, CREAM) + star(188, 228, 4, CREAM);
-    }
-    return t;
-  }
-  function arms(o, type) {
-    var sl = o.torso, hand = SKIN;
-    var L = '<path d="M108 190 C92 214 88 246 90 274" stroke="' + sl + '" stroke-width="28" stroke-linecap="round" fill="none"/>';
-    var R = '<path d="M212 190 C228 214 232 246 230 274" stroke="' + sl + '" stroke-width="28" stroke-linecap="round" fill="none"/>';
-    var hands = '<circle cx="90" cy="282" r="13" fill="' + hand + '"/><circle cx="230" cy="282" r="13" fill="' + hand + '"/>';
-    var extra = '';
-    if (type === 'warrior') extra = '<rect x="78" y="256" width="26" height="14" rx="5" fill="' + AMBER + '"/><rect x="216" y="256" width="26" height="14" rx="5" fill="' + AMBER + '"/>';
-    return L + R + extra + hands;
-  }
-  function outfitDetails(type) {
-    switch (type) {
-      case 'thinker':
-        return '<path d="M144 176 L160 214 L176 176 Z" fill="' + CREAM + '"/>' +
-               '<rect x="157" y="212" width="6" height="78" fill="rgba(0,0,0,.25)"/>' +
-               '<circle cx="160" cy="236" r="3" fill="' + CREAM + '"/><circle cx="160" cy="258" r="3" fill="' + CREAM + '"/>';
-      case 'entrepreneur':
-        return '<path d="M140 176 L160 226 L180 176 Z" fill="#FFFFFF"/>' +
-               '<path d="M156 188 L164 188 L168 202 L160 258 L152 202 Z" fill="' + AMBER + '"/>' +
-               '<path d="M140 176 L128 232 L158 224 Z" fill="#162239"/><path d="M180 176 L192 232 L162 224 Z" fill="#162239"/>';
-      case 'warrior':
-        return '<path d="M104 196 L216 262 L216 284 L104 218 Z" fill="' + AMBER + '"/>' +
-               '<rect x="104" y="282" width="112" height="9" rx="4" fill="' + AMBER + '"/>';
-      case 'dreamer':
-        return '<path d="M160 244 C142 226 144 208 156 208 C160 208 160 212 160 214 C160 212 160 208 164 208 C176 208 178 226 160 244Z" fill="#E94B6A"/>';
-      case 'mystic':
-        return '<path d="M146 190 C146 226 176 226 176 190 C168 208 154 208 146 190Z" fill="' + AMBER + '"/>';
-      default: return '';
-    }
-  }
-  function head(type) {
-    var s = '';
-    if (type === 'mystic') s += '<path d="M104 150 C100 80 220 80 216 150 C214 178 106 178 104 150Z" fill="#2B2250"/>';
-    s += '<rect x="149" y="156" width="22" height="24" rx="8" fill="' + SKIN2 + '"/>';
-    s += '<circle cx="113" cy="124" r="9" fill="' + SKIN2 + '"/><circle cx="207" cy="124" r="9" fill="' + SKIN2 + '"/>';
-    s += '<circle cx="160" cy="120" r="48" fill="' + SKIN + '"/>';
-    // волосы
-    if (type === 'dreamer') {
-      s += '<path d="M110 118 C106 66 214 66 210 118 C204 92 116 92 110 118Z" fill="#6B3E2E"/><path d="M110 112 C100 150 104 176 118 188 L122 128Z" fill="#6B3E2E"/><path d="M210 112 C220 150 216 176 202 188 L198 128Z" fill="#6B3E2E"/>';
-    } else if (type === 'mystic') {
-      s += '<path d="M116 108 C122 80 198 80 204 108 C190 94 130 94 116 108Z" fill="#2B2223"/>';
-    } else if (type === 'entrepreneur') {
-      s += '<path d="M112 112 C110 70 210 66 208 112 C200 90 150 82 128 98 C122 102 116 108 112 112Z" fill="#1E1715"/>';
-    } else {
-      s += '<path d="M111 114 C108 68 212 66 209 114 C200 92 120 90 111 114Z" fill="' + HAIR + '"/>';
-    }
-    // лицо
-    s += '<circle cx="143" cy="124" r="4.6" fill="#2B1F1A"/><circle cx="177" cy="124" r="4.6" fill="#2B1F1A"/>';
-    s += '<circle cx="144.5" cy="122.5" r="1.4" fill="#fff"/><circle cx="178.5" cy="122.5" r="1.4" fill="#fff"/>';
-    s += '<path d="M146 141 Q160 154 174 141" stroke="#8A4B3A" stroke-width="3.4" stroke-linecap="round" fill="none"/>';
-    s += '<circle cx="132" cy="138" r="6" fill="#F2A39A" opacity=".45"/><circle cx="188" cy="138" r="6" fill="#F2A39A" opacity=".45"/>';
-    // аксессуары по типу
-    if (type === 'thinker') {
-      s += '<circle cx="143" cy="124" r="13" fill="rgba(255,255,255,.12)" stroke="' + AMBER + '" stroke-width="3.2"/><circle cx="177" cy="124" r="13" fill="rgba(255,255,255,.12)" stroke="' + AMBER + '" stroke-width="3.2"/><path d="M156 124 L164 124" stroke="' + AMBER + '" stroke-width="3"/>';
-      s += '<g class="tw"><circle cx="160" cy="36" r="13" fill="#FFD27A"/><rect x="154" y="48" width="12" height="8" rx="2" fill="#B0A69A"/><path d="M160 12 L160 6 M182 22 L187 17 M138 22 L133 17 M190 38 L196 38 M130 38 L124 38" stroke="#FFD27A" stroke-width="3" stroke-linecap="round"/></g>';
-    }
-    if (type === 'warrior') s += '<path d="M112 100 C130 88 190 88 208 100 L208 112 C190 102 130 102 112 112Z" fill="' + AMBER + '"/><path d="M208 104 L232 98 M208 108 L236 112" stroke="' + AMBER + '" stroke-width="5" stroke-linecap="round"/>';
-    if (type === 'dreamer') s += '<g transform="translate(206 84)"><circle r="6" fill="#FFD27A"/><circle cx="0" cy="-10" r="7" fill="#fff"/><circle cx="10" cy="-3" r="7" fill="#fff"/><circle cx="6" cy="8" r="7" fill="#fff"/><circle cx="-6" cy="8" r="7" fill="#fff"/><circle cx="-10" cy="-3" r="7" fill="#fff"/><circle r="5" fill="#FFD27A"/></g>';
-    if (type === 'mystic') s += '<path d="M206 70 C192 70 190 96 206 98 C198 90 198 78 206 70Z" fill="' + AMBER + '"/>';
-    return s;
-  }
-  function props(level, type) {
-    var s = '';
-    if (type === 'entrepreneur') s += '<g><rect x="62" y="290" width="46" height="34" rx="5" fill="#7A4B2B"/><rect x="76" y="282" width="18" height="10" rx="3" fill="none" stroke="#7A4B2B" stroke-width="4"/><rect x="62" y="304" width="46" height="4" fill="#5A3519"/></g>';
-    if (level >= 1) s += '<g transform="translate(236 276) rotate(-14)"><rect x="-17" y="-22" width="34" height="44" rx="4" fill="#DEA062"/><rect x="-17" y="-22" width="7" height="44" rx="3" fill="rgba(0,0,0,.25)"/><rect x="-5" y="-12" width="18" height="4" rx="2" fill="rgba(255,255,255,.65)"/><rect x="-5" y="-4" width="13" height="4" rx="2" fill="rgba(255,255,255,.45)"/></g><circle cx="230" cy="282" r="13" fill="' + SKIN + '"/>';
-    if (level >= 2) s += star(160, 204, 11, AMBER);
-    return s;
-  }
-  function crown(level) {
-    if (level < 5) return '';
-    return '<ellipse cx="160" cy="66" rx="62" ry="12" fill="none" stroke="#FFD27A" stroke-width="4" opacity=".9"/>' +
-           '<path d="M126 78 L134 48 L148 66 L160 40 L172 66 L186 48 L194 78 Z" fill="#FFD27A" stroke="#C9822F" stroke-width="2.5" stroke-linejoin="round"/>' +
-           '<circle cx="160" cy="46" r="4" fill="#E94B6A"/><circle cx="134" cy="52" r="3" fill="#6FB1FF"/><circle cx="186" cy="52" r="3" fill="#6FB1FF"/>';
-  }
-  function sparkles(level) {
-    var s = '';
-    if (level >= 2) s += spark(76, 110, 9, 0) + spark(250, 160, 7, .6);
-    if (level >= 4) s += spark(40, 210, 8, .3) + spark(284, 236, 10, .9) + spark(96, 60, 6, 1.2);
-    if (level >= 5) s += spark(214, 40, 9, .4) + spark(30, 320, 7, .7) + spark(292, 330, 8, 1.1);
+    var s = '<circle cx="160" cy="200" r="160" fill="url(#sbAura)" opacity="' + op + '"/>';
+    // Орбитальные пиксельные книги
+    s += '<g class="orbit">' +
+      pxMiniBook(4, 17, '#DEA062', '#8F5620') +
+      pxMiniBook(34, 14, '#7B6350', '#4A382B') +
+      pxMiniBook(33, 35, '#F4ECE0', '#B0A69A') +
+      (level >= 5 ? pxMiniBook(5, 34, '#5B4A9B', '#312366') : '') +
+      '</g>';
     return s;
   }
 
   function render(type, level) {
     type = OUTFITS[type] ? type : 'base';
     level = Math.max(0, Math.min(5, level | 0));
-    var o = OUTFITS[type];
-    return '<svg class="hero-svg" viewBox="0 0 320 390" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Герой Smart Books: ' + o.name + ', уровень ' + level + '">' +
+    var p = PAL.outfit[type];
+    var g = new Grid(40, 48);
+
+    drawCape(g, level, type);
+    drawMysticHoodBack(g, type, p);
+    drawLegsAndTorso(g, type, p);
+    drawBadge(g, level, type);
+    drawArms(g, type, level, p);
+    drawHead(g, type, p);
+    drawCrown(g, level);
+
+    // Пиксельная тень под ногами
+    var shadow =
+      '<rect x="96" y="368" width="128" height="8" fill="rgba(0,0,0,.42)"/>' +
+      '<rect x="112" y="376" width="96" height="8" fill="rgba(0,0,0,.28)"/>';
+
+    return '<svg class="hero-svg" viewBox="0 0 320 384" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Пиксельный герой Smart Books: ' + OUTFITS[type].name + ', уровень ' + level + '">' +
       '<defs><radialGradient id="sbAura"><stop offset="0" stop-color="#FFD27A" stop-opacity=".95"/><stop offset=".55" stop-color="#F5A50A" stop-opacity=".35"/><stop offset="1" stop-color="#F5A50A" stop-opacity="0"/></radialGradient></defs>' +
-      aura(level) +
-      '<ellipse cx="160" cy="372" rx="84" ry="10" fill="rgba(0,0,0,.45)"/>' +
-      '<g class="hero-body">' +
-        cape(level, type) + legs(o, type) + torso(o, type) + outfitDetails(type) + arms(o, type) + props(level, type) + head(type) + crown(level) +
-      '</g>' + sparkles(level) + '</svg>';
+      auraLayer(level) +
+      shadow +
+      '<g class="hero-body">' + g.toSVG() + '</g>' +
+      extraEffects(level, type) +
+      '</svg>';
   }
 
   var api = { render: render, OUTFITS: OUTFITS };
